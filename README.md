@@ -126,7 +126,7 @@ sudo chown -R www-data:www-data /var/www/html/booky/storage
 sudo chmod -R ug+rwx /var/www/html/booky/storage
 ```
 
-`.env` en el servidor: `APP_ENV=production`, `APP_DEBUG=false`, y **nunca** pises ese archivo al copiar código desde la PC.
+`.env` en el servidor: `APP_ENV=production`, `APP_DEBUG=false`, y **nunca** lo sobrescribas al desplegar.
 
 Después de copiar el código, abrí `install.php` **una vez** si la base está vacía, o dejá que `Schema::ensure()` migre tablas ya existentes. Luego sacá `install.php` del document root.
 
@@ -195,29 +195,44 @@ sudo apt install -y pdftk-java
 
 ## Deploy
 
-### Desde Windows (SMB → servidor)
+Subí el código al document root del servidor (por ejemplo `/var/www/html/booky`). **No** incluyas `.git` y **no** sobrescribas el `.env` del servidor.
 
-En esta máquina el servidor está montado como **`W:\booky`** (equivale a `/var/www/html/booky` en el Ubuntu).
+### Opción A — copia desde otra máquina (Windows)
 
-Copiá el código **sin** `.git` y **sin sobrescribir** `W:\booky\.env`:
-
-```powershell
-robocopy "C:\Users\Usuario\Documents\Git\booky_the_creation_platform" "W:\booky" /E /XD .git /XF .env
-```
-
-Para subir solo los servicios PDF tras un cambio:
+Si tenés el repo en la PC y el servidor montado por red (SMB), podés usar `robocopy`. Reemplazá las rutas por las tuyas:
 
 ```powershell
-robocopy "C:\Users\Usuario\Documents\Git\booky_the_creation_platform\app\Services" "W:\booky\app\Services" ManuscriptPdfService.php PdfMergeService.php DocumentService.php SimplePdf.php PageCounter.php
+robocopy "C:\ruta\al\repo\booky" "Z:\booky" /E /XD .git /XF .env
 ```
 
-Después de copiar PHP, reiniciá Apache en el servidor:
+Solo archivos concretos (ej. tras un cambio en servicios PDF):
+
+```powershell
+robocopy "C:\ruta\al\repo\booky\app\Services" "Z:\booky\app\Services" ManuscriptPdfService.php PdfMergeService.php DocumentService.php SimplePdf.php PageCounter.php
+```
+
+### Opción B — copia desde otra máquina (Linux / macOS)
+
+```bash
+rsync -av --exclude '.git' --exclude '.env' ./booky/ usuario@servidor:/var/www/html/booky/
+```
+
+### Opción C — git en el servidor
+
+```bash
+cd /var/www/html/booky
+git pull
+# .env no va en el repo; no lo pises
+```
+
+Después de actualizar PHP, reiniciá el servidor web:
 
 ```bash
 sudo systemctl restart apache2
+# o, con PHP-FPM: sudo systemctl restart php8.3-fpm
 ```
 
-### En el servidor
+### Permisos y archivos en el servidor
 
 Los uploads viven en `storage/uploads/` (Apache los deniega por `.htaccess`). Los PDF temporales de exportación van a `storage/tmp/` y se borran al terminar.
 
