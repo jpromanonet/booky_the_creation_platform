@@ -1,0 +1,8 @@
+.env
+Thumbs.db
+Desktop.ini
+*.log
+.DS_Store
+/storage/uploads/**
+!/storage/uploads/.htaccess
+!/storage/uploads/.gitkeep

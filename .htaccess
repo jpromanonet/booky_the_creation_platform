@@ -1,0 +1,2 @@
+# Sin rewrite: las rutas van por index.php?r=/ruta
+Options -Indexes
