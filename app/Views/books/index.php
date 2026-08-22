@@ -48,7 +48,7 @@ $canWrite = $canWrite ?? false;
                     </div>
                     <div class="progress-meta muted">
                         <span><?= e(format_pct($p['pct'])) ?> completo</span>
-                        <span>Outline <?= !empty($p['has_outline']) ? 'listo' : 'pendiente' ?> · Sinopsis <?= !empty($p['has_synopsis']) ? 'lista' : 'pendiente' ?></span>
+                        <span><?= e(format_n((int) ($p['pages'] ?? 0))) ?> pág. · <?= e(format_n((int) ($p['words'] ?? 0))) ?> pal.</span>
                     </div>
                     <?php $showHitos = false; require __DIR__ . '/../partials/progress_bars.php'; ?>
                 </article>

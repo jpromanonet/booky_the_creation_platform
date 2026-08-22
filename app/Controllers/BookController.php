@@ -63,6 +63,7 @@ final class BookController
             'canWrite' => Auth::isAdmin(),
             'success' => flash('success'),
             'error' => flash('error'),
+            'celebrate' => flash('celebrate'),
         ]);
     }
 
@@ -116,7 +117,12 @@ final class BookController
             $_FILES['file'] ?? [],
             Auth::user() ? (int) Auth::user()['id'] : null
         );
-        flash($res['ok'] ? 'success' : 'error', $res['ok'] ? 'Documento cargado.' : ($res['error'] ?? 'No se pudo subir.'));
+        if ($res['ok']) {
+            flash('success', 'Documento cargado.');
+            self::maybeCelebrateDraft($bookId);
+        } else {
+            flash('error', $res['error'] ?? 'No se pudo subir.');
+        }
         $anchor = $kind === DocumentService::KIND_SYNOPSIS ? 'sinopsis' : 'outline';
         redirect('/libros/' . $bookId . '?focus=' . $anchor);
     }
@@ -142,7 +148,12 @@ final class BookController
             Auth::user() ? (int) Auth::user()['id'] : null,
             $title
         );
-        flash($res['ok'] ? 'success' : 'error', $res['ok'] ? 'Borrador actualizado. Páginas recalculadas.' : ($res['error'] ?? 'No se pudo subir.'));
+        if ($res['ok']) {
+            flash('success', 'Borrador actualizado. Páginas y palabras recalculadas.');
+            self::maybeCelebrateDraft($bookId);
+        } else {
+            flash('error', $res['error'] ?? 'No se pudo subir.');
+        }
         redirect('/libros/' . $bookId . '?focus=capitulo-' . $cid);
     }
 
@@ -301,5 +312,23 @@ final class BookController
             'chapters' => $chapters,
             'epilogue' => $epilogue,
         ];
+    }
+
+    /** Felicita cuando el libro queda al 100% con borradores (no PDF). También al actualizar si ya estaba completo. */
+    private static function maybeCelebrateDraft(int $bookId): void
+    {
+        $p = ProgressService::forBook($bookId);
+        if ((float) ($p['pct'] ?? 0) < 99.9) {
+            return;
+        }
+        $payload = json_encode([
+            'author' => (string) ($p['author'] ?? ''),
+            'title' => (string) ($p['title'] ?? ''),
+            'pages' => (int) ($p['pages'] ?? 0),
+            'words' => (int) ($p['words'] ?? 0),
+        ], JSON_UNESCAPED_UNICODE);
+        if (is_string($payload) && $payload !== '') {
+            flash('celebrate', $payload);
+        }
     }
 }

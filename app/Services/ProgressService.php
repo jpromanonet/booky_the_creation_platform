@@ -4,6 +4,26 @@ declare(strict_types=1);
 
 final class ProgressService
 {
+    public const COLOR_LIGHT = '#4ade80';
+    public const COLOR_DARK = '#166534';
+    public const COLOR_MID = '#d97706';
+    public const COLOR_LOW = '#ef4444';
+
+    /** Verde clarito desde 50%, verde oscuro al 100%. Debajo: ámbar / rojo. */
+    public static function barColor(float $pct): string
+    {
+        if ($pct >= 99.9) {
+            return self::COLOR_DARK;
+        }
+        if ($pct >= 50) {
+            return self::COLOR_LIGHT;
+        }
+        if ($pct >= 34) {
+            return self::COLOR_MID;
+        }
+        return self::COLOR_LOW;
+    }
+
     /**
      * @return array<string,mixed>
      */
@@ -19,6 +39,7 @@ final class ProgressService
         $chaptersTotal = count($chapters);
         $chaptersDone = 0;
         $pages = 0;
+        $words = 0;
         $palette = ['#9a3412', '#d97706', '#3b82f6', '#7c3aed', '#0f766e', '#db2777', '#f97316', '#2563eb'];
         $segments = [];
         $cumulative = [];
@@ -28,11 +49,13 @@ final class ProgressService
             $name = strtolower((string) ($ch['original_name'] ?? ''));
             $ext = pathinfo($name, PATHINFO_EXTENSION);
             $chPages = $ext === 'pdf' ? 0 : (int) ($ch['page_count'] ?? 0);
+            $chWords = $ext === 'pdf' ? 0 : self::chapterWords($ch);
             $done = !empty($ch['document_id']);
             if ($done) {
                 $chaptersDone++;
             }
             $pages += $chPages;
+            $words += $chWords;
             $running += $chPages;
             $kind = (string) ($ch['kind'] ?? 'chapter');
             $label = (string) $ch['title'];
@@ -43,6 +66,7 @@ final class ProgressService
             $segments[] = [
                 'label' => $label,
                 'pages' => $chPages,
+                'words' => $chWords,
                 'pct' => 0.0,
                 'color' => $palette[$i % count($palette)],
                 'done' => $done,
@@ -71,7 +95,7 @@ final class ProgressService
         $done = ($hasOutline ? 1 : 0) + ($hasSynopsis ? 1 : 0) + $chaptersDone;
         $pct = round(($done / $total) * 100, 1);
         $chapterPct = $chaptersTotal > 0 ? round(($chaptersDone / $chaptersTotal) * 100, 1) : 0.0;
-        $color = $pct >= 67 ? '#10b981' : ($pct >= 34 ? '#d97706' : '#ef4444');
+        $color = self::barColor($pct);
         $pageValues = array_map(static fn (array $s): int => (int) $s['pages'], $segments);
         $withPages = array_values(array_filter($pageValues, static fn (int $n): bool => $n > 0));
         $lastUpload = null;
@@ -93,6 +117,7 @@ final class ProgressService
             'chapters_total' => $chaptersTotal,
             'chapter_pct' => $chapterPct,
             'pages' => $pages,
+            'words' => $words,
             'avg_pages' => $chaptersDone > 0 ? round($pages / $chaptersDone, 1) : 0,
             'max_pages' => $withPages !== [] ? max($withPages) : 0,
             'min_pages' => $withPages !== [] ? min($withPages) : 0,
@@ -104,8 +129,39 @@ final class ProgressService
             'genre' => (string) ($book['genre'] ?? ''),
             'status' => (string) ($book['status'] ?? ''),
             'author' => (string) ($book['author_name'] ?? ''),
+            'title' => (string) ($book['title'] ?? ''),
             'last_upload_at' => $lastUpload,
+            'complete' => $pct >= 99.9,
         ];
+    }
+
+    /** @param array<string,mixed> $ch */
+    private static function chapterWords(array $ch): int
+    {
+        $stored = (int) ($ch['word_count'] ?? 0);
+        if ($stored > 0 || empty($ch['document_id'])) {
+            return max(0, $stored);
+        }
+        $doc = DocumentService::find((int) $ch['document_id']);
+        if (!$doc) {
+            return 0;
+        }
+        $abs = DocumentService::absolutePath($doc);
+        $name = (string) ($doc['original_name'] ?? '');
+        $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+        if ($ext === 'pdf' || !is_file($abs)) {
+            return 0;
+        }
+        $n = DocumentText::wordCountFromFile($abs, $name);
+        if ($n > 0) {
+            try {
+                Database::pdo()->prepare('UPDATE documents SET word_count = :w WHERE id = :id')
+                    ->execute(['w' => $n, 'id' => (int) $doc['id']]);
+            } catch (Throwable) {
+                // Columna puede faltar en un instante raro; igual devolvemos el conteo.
+            }
+        }
+        return $n;
     }
 
     /**
@@ -129,6 +185,7 @@ final class ProgressService
     {
         $books = count($catalog);
         $pages = 0;
+        $words = 0;
         $chaptersDone = 0;
         $chaptersTotal = 0;
         $outline = 0;
@@ -149,6 +206,7 @@ final class ProgressService
         foreach ($catalog as $row) {
             $p = $row['progress'] ?? [];
             $pages += (int) ($p['pages'] ?? 0);
+            $words += (int) ($p['words'] ?? 0);
             $chaptersDone += (int) ($p['chapters_done'] ?? 0);
             $chaptersTotal += (int) ($p['chapters_total'] ?? 0);
             $outline += !empty($p['has_outline']) ? 1 : 0;
@@ -196,12 +254,13 @@ final class ProgressService
         return [
             'books' => $books,
             'pages' => $pages,
+            'words' => $words,
             'avg_pages' => $books > 0 ? round($pages / $books, 1) : 0,
             'avg_pct' => $books > 0 ? round($pctSum / $books, 1) : 0,
             'overall_pct' => $overallPct,
             'overall_done' => $hitDone,
             'overall_total' => $hitTotal,
-            'overall_color' => $overallPct >= 50 ? '#166534' : '#4ade80',
+            'overall_color' => self::barColor($overallPct),
             'over_half' => $overHalf,
             'chapters_done' => $chaptersDone,
             'chapters_total' => $chaptersTotal,

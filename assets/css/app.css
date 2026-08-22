@@ -439,6 +439,14 @@ input:focus, select:focus, textarea:focus {
     gap: 1rem;
     margin: 0;
 }
+.stat-row.cols-5 {
+    grid-template-columns: repeat(5, 1fr);
+}
+@media (max-width: 1200px) {
+    .stat-row.cols-5 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
 .stat-row.cols-3 {
     grid-template-columns: repeat(3, 1fr);
 }
@@ -2805,3 +2813,62 @@ input, select, textarea {
 .coach-card.mood-stalled { border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
 .coach-card.mood-almost { border-color: color-mix(in srgb, var(--ok) 40%, var(--line)); }
 .coach-card.mood-done { border-color: color-mix(in srgb, var(--ok) 55%, var(--line)); }
+
+/* Modal de felicitación al completar borradores */
+.celebrate-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: grid;
+    place-items: center;
+    padding: 1.25rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s ease;
+}
+.celebrate-modal.is-open {
+    opacity: 1;
+    pointer-events: auto;
+}
+.celebrate-modal.is-closing { opacity: 0; pointer-events: none; }
+.celebrate-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.48);
+    backdrop-filter: blur(2px);
+}
+.celebrate-card {
+    position: relative;
+    z-index: 1;
+    width: min(28rem, 100%);
+    padding: 1.75rem 1.6rem 1.5rem;
+    border-radius: 1rem;
+    border: 1px solid color-mix(in srgb, var(--ok) 35%, var(--line));
+    background:
+        radial-gradient(120% 80% at 100% 0%, color-mix(in srgb, #4ade80 22%, transparent), transparent 55%),
+        var(--panel);
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.22);
+    transform: translateY(10px) scale(0.98);
+    transition: transform 0.22s ease;
+}
+.celebrate-modal.is-open .celebrate-card { transform: none; }
+.celebrate-kicker {
+    margin: 0;
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #166534;
+    font-weight: 700;
+}
+.celebrate-card h2 {
+    margin: 0.45rem 0 0.75rem;
+    font-size: clamp(1.35rem, 3vw, 1.7rem);
+    line-height: 1.25;
+}
+.celebrate-body {
+    margin: 0 0 0.65rem;
+    line-height: 1.5;
+}
+.celebrate-note { margin: 0 0 1.15rem; }
+[data-theme="dark"] .celebrate-kicker { color: #4ade80; }
+[data-theme="dark"] .celebrate-backdrop { background: rgba(2, 6, 23, 0.72); }

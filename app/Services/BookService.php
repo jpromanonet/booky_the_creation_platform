@@ -101,7 +101,7 @@ final class BookService
     {
         $stmt = Database::pdo()->prepare(
             'SELECT c.*, p.title AS part_title,
-                    d.id AS document_id, d.page_count, d.original_name, d.created_at AS uploaded_at,
+                    d.id AS document_id, d.page_count, d.word_count, d.original_name, d.created_at AS uploaded_at,
                     pdf.id AS pdf_id, pdf.page_count AS pdf_page_count, pdf.original_name AS pdf_name,
                     pdf.created_at AS pdf_uploaded_at, pdf.file_path AS pdf_path
              FROM chapters c

@@ -73,6 +73,13 @@ final class Schema
         } catch (Throwable) {
             // Already migrated or table missing on first install from SQL.
         }
+
+        if (!self::columnExists('documents', 'word_count')) {
+            $pdo->exec(
+                'ALTER TABLE documents
+                 ADD COLUMN word_count INT UNSIGNED NOT NULL DEFAULT 0 AFTER page_count'
+            );
+        }
     }
 
     private static function columnExists(string $table, string $column): bool

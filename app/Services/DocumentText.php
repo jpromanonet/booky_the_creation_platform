@@ -8,6 +8,12 @@ final class DocumentText
     {
         $abs = DocumentService::absolutePath($doc);
         $name = (string) ($doc['original_name'] ?? $abs);
+        return self::fromPath($abs, $name);
+    }
+
+    public static function fromPath(string $abs, string $originalName = ''): string
+    {
+        $name = $originalName !== '' ? $originalName : $abs;
         $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
         if (!is_file($abs) || !class_exists('ZipArchive')) {
             return '';
@@ -17,6 +23,21 @@ final class DocumentText
             'odt', 'ods' => self::fromOpenDocument($abs),
             default => '',
         };
+    }
+
+    public static function wordCountFromFile(string $abs, string $originalName = ''): int
+    {
+        return self::countWords(self::fromPath($abs, $originalName));
+    }
+
+    public static function countWords(string $text): int
+    {
+        $text = trim(preg_replace('/\s+/u', ' ', $text) ?? '');
+        if ($text === '') {
+            return 0;
+        }
+        $parts = preg_split('/\s+/u', $text, -1, PREG_SPLIT_NO_EMPTY);
+        return is_array($parts) ? count($parts) : 0;
     }
 
     private static function fromDocx(string $abs): string

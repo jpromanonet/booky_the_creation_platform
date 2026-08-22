@@ -345,7 +345,16 @@
         type: 'bar',
         data: {
           labels: catalog.map((r) => r.title),
-          datasets: [{ label: '%', data: catalog.map((r) => r.pct), backgroundColor: coach ? '#166534' : '#9a3412' }],
+          datasets: [{
+            label: '%',
+            data: catalog.map((r) => r.pct),
+            backgroundColor: catalog.map((r) => {
+              const pct = Number(r.pct || 0);
+              if (pct >= 99.9) return '#166534';
+              if (pct >= 50) return '#4ade80';
+              return coach ? '#d97706' : '#9a3412';
+            }),
+          }],
         },
         options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { min: 0, max: 100 } } },
       });
@@ -396,13 +405,13 @@
       });
     });
     make('completeSplit', null, (el) => {
-      doughnutOrBar(el, 'doughnut', ['Al 100%', 'En curso'], [overview.complete || 0, overview.in_progress || 0], ['#10b981', '#d97706']);
+      doughnutOrBar(el, 'doughnut', ['Al 100%', 'En curso'], [overview.complete || 0, overview.in_progress || 0], ['#166534', '#d97706']);
     });
 
     const greens = ['#4ade80', '#166534'];
     make('overallGauge', null, (el) => {
       const pct = Number(overview.overall_pct || 0);
-      const fill = pct >= 50 ? '#166534' : '#4ade80';
+      const fill = pct >= 99.9 ? '#166534' : (pct >= 50 ? '#4ade80' : '#d97706');
       doughnutOrBar(el, 'doughnut', ['Hecho', 'Falta'], [pct, Math.max(0, 100 - pct)], [fill, 'rgba(148,163,184,0.22)']);
     });
     make('halfSplit', null, (el) => {
@@ -527,10 +536,12 @@
         });
       });
       bookScope('donePending', (el) => {
-        doughnutOrBar(el, 'doughnut', ['Con documento', 'Pendientes'], [book.chapters_done || 0, book.chapters_pending || 0], ['#10b981', '#d97706']);
+        doughnutOrBar(el, 'doughnut', ['Con documento', 'Pendientes'], [book.chapters_done || 0, book.chapters_pending || 0], ['#4ade80', '#d97706']);
       });
       bookScope('gauge', (el) => {
-        doughnutOrBar(el, 'doughnut', ['Completo', 'Restante'], [book.pct || 0, Math.max(0, 100 - (book.pct || 0))], ['#10b981', 'rgba(148,163,184,0.25)']);
+        const pct = Number(book.pct || 0);
+        const fill = pct >= 99.9 ? '#166534' : (pct >= 50 ? '#4ade80' : '#d97706');
+        doughnutOrBar(el, 'doughnut', ['Completo', 'Restante'], [pct, Math.max(0, 100 - pct)], [fill, 'rgba(148,163,184,0.25)']);
       });
     }
   };
@@ -539,5 +550,20 @@
     document.addEventListener('DOMContentLoaded', () => window.setTimeout(bootCharts, 40));
   } else {
     window.setTimeout(bootCharts, 40);
+  }
+
+  const celebrate = document.getElementById('celebrate-modal');
+  if (celebrate) {
+    const close = () => {
+      celebrate.classList.add('is-closing');
+      window.setTimeout(() => celebrate.remove(), 220);
+    };
+    celebrate.querySelectorAll('[data-celebrate-close]').forEach((el) => {
+      el.addEventListener('click', close);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.getElementById('celebrate-modal')) close();
+    });
+    window.setTimeout(() => celebrate.classList.add('is-open'), 40);
   }
 })();

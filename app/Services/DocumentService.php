@@ -186,10 +186,13 @@ final class DocumentService
         @chmod($absPath, 0664);
 
         $pages = PageCounter::count($absPath, (string) ($file['name'] ?? ''));
+        $words = $kind === self::KIND_PDF
+            ? 0
+            : DocumentText::wordCountFromFile($absPath, (string) ($file['name'] ?? ''));
         $pdo = Database::pdo();
         $pdo->prepare(
-            'INSERT INTO documents (book_id, chapter_id, kind, title, original_name, file_path, mime_type, page_count, uploaded_by)
-             VALUES (:book_id, :chapter_id, :kind, :title, :original_name, :file_path, :mime, :pages, :uid)'
+            'INSERT INTO documents (book_id, chapter_id, kind, title, original_name, file_path, mime_type, page_count, word_count, uploaded_by)
+             VALUES (:book_id, :chapter_id, :kind, :title, :original_name, :file_path, :mime, :pages, :words, :uid)'
         )->execute([
             'book_id' => $bookId,
             'chapter_id' => $chapterId,
@@ -199,6 +202,7 @@ final class DocumentService
             'file_path' => $relPath,
             'mime' => mb_substr((string) ($file['type'] ?? 'application/octet-stream'), 0, 120),
             'pages' => $pages,
+            'words' => $words,
             'uid' => $userId,
         ]);
         return ['ok' => true, 'id' => (int) $pdo->lastInsertId()];

@@ -77,10 +77,12 @@ $scopeNote = $authorName !== '' ? ' · ' . $authorName : ' de todos los libros';
 
         <p class="progress-caption" style="margin:1.15rem 0 0.45rem">
             Avance general<?= e($scopeNote) ?>
-            <?php if ($overallPct >= 50): ?>
-                · ya cruzaste el ecuador
+            <?php if ($overallPct >= 99.9): ?>
+                · verde oscuro: todo al 100%
+            <?php elseif ($overallPct >= 50): ?>
+                · verde clarito: ya pasaste el 50%
             <?php else: ?>
-                · el verde se oscurece al pasar el 50%
+                · el verde aparece al pasar el 50%; al 100% se oscurece
             <?php endif; ?>
         </p>
         <div class="progress-track progress-track-overall" aria-label="Avance general">

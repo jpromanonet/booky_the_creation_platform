@@ -81,6 +81,7 @@ $chartPayload = [
                         <?= e((string) $row['author_name']) ?>
                         · <?= e(format_pct($p['pct'])) ?> completo
                         · <?= e(format_n($p['pages'])) ?> pág.
+                        · <?= e(format_n((int) ($p['words'] ?? 0))) ?> pal.
                         · <?= (int) $p['chapters_done'] ?>/<?= (int) $p['chapters_total'] ?> cap.
                         <?php if (!empty($p['last_upload_at'])): ?>
                             · Último capítulo <?= e(format_datetime((string) $p['last_upload_at'])) ?>
