@@ -10,7 +10,7 @@ return [
     'debug' => filter_var(booky_env('APP_DEBUG', 'false'), FILTER_VALIDATE_BOOLEAN),
     'url' => rtrim((string) booky_env('APP_URL', ''), '/'),
     'session_name' => (string) booky_env('SESSION_NAME', 'booky_session'),
-    'session_lifetime' => (int) booky_env('SESSION_LIFETIME', '28800'),
-    'session_idle' => (int) booky_env('SESSION_IDLE', '7200'),
+    'session_lifetime' => (int) booky_env('SESSION_LIFETIME', '86400'),
+    'session_idle' => (int) booky_env('SESSION_IDLE', '86400'),
     'timezone' => 'America/Argentina/Buenos_Aires',
 ];

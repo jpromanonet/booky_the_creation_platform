@@ -11,9 +11,13 @@ final class Auth
         }
 
         $secure = self::cookieSecure();
-        $lifetime = (int) app_config('session_lifetime', 28800);
+        $lifetime = (int) app_config('session_lifetime', 86400);
         if ($lifetime < 300) {
             $lifetime = 300;
+        }
+        $idle = (int) app_config('session_idle', $lifetime);
+        if ($idle <= 0) {
+            $idle = $lifetime;
         }
 
         session_name($name);
@@ -31,9 +35,11 @@ final class Auth
             'cookie_secure' => $secure,
             'use_strict_mode' => true,
             'use_only_cookies' => true,
+            'gc_maxlifetime' => max($lifetime, $idle),
         ]);
 
-        self::enforceIdleTimeout((int) app_config('session_idle', 7200));
+        self::enforceIdleTimeout($idle);
+        self::touchSessionCookie($lifetime);
     }
 
     public static function attempt(string $email, string $password): bool
@@ -195,6 +201,23 @@ final class Auth
             return;
         }
         $_SESSION['_last_activity'] = time();
+    }
+
+    /** Renueva la cookie en cada visita para que las 24 h corran desde la última actividad. */
+    private static function touchSessionCookie(int $lifetime): void
+    {
+        if ($lifetime <= 0 || !isset($_SESSION['user']) || session_status() !== PHP_SESSION_ACTIVE) {
+            return;
+        }
+        $params = session_get_cookie_params();
+        setcookie(session_name(), session_id(), [
+            'expires' => time() + $lifetime,
+            'path' => $params['path'] ?: '/',
+            'domain' => $params['domain'] ?? '',
+            'secure' => (bool) ($params['secure'] ?? false),
+            'httponly' => (bool) ($params['httponly'] ?? true),
+            'samesite' => $params['samesite'] ?? 'Lax',
+        ]);
     }
 
     private static function allowLoginAttempt(): bool
