@@ -48,7 +48,7 @@ final class ProgressService
         foreach ($chapters as $i => $ch) {
             $name = strtolower((string) ($ch['original_name'] ?? ''));
             $ext = pathinfo($name, PATHINFO_EXTENSION);
-            $chPages = $ext === 'pdf' ? 0 : (int) ($ch['page_count'] ?? 0);
+            $chPages = $ext === 'pdf' ? 0 : self::chapterPages($ch);
             $chWords = $ext === 'pdf' ? 0 : self::chapterWords($ch);
             $done = !empty($ch['document_id']);
             if ($done) {
@@ -133,6 +133,34 @@ final class ProgressService
             'last_upload_at' => $lastUpload,
             'complete' => $pct >= 99.9,
         ];
+    }
+
+    /** @param array<string,mixed> $ch */
+    private static function chapterPages(array $ch): int
+    {
+        if (empty($ch['document_id'])) {
+            return 0;
+        }
+        $doc = DocumentService::find((int) $ch['document_id']);
+        if (!$doc) {
+            return max(0, (int) ($ch['page_count'] ?? 0));
+        }
+        $abs = DocumentService::absolutePath($doc);
+        $name = (string) ($doc['original_name'] ?? '');
+        $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+        if ($ext === 'pdf' || !is_file($abs)) {
+            return max(0, (int) ($ch['page_count'] ?? 0));
+        }
+        $n = PageCounter::count($abs, $name);
+        $stored = (int) ($ch['page_count'] ?? 0);
+        if ($n > 0 && $n !== $stored) {
+            try {
+                Database::pdo()->prepare('UPDATE documents SET page_count = :p WHERE id = :id')
+                    ->execute(['p' => $n, 'id' => (int) $doc['id']]);
+            } catch (Throwable) {
+            }
+        }
+        return max(0, $n);
     }
 
     /** @param array<string,mixed> $ch */
