@@ -19,6 +19,13 @@ final class Auth
         if ($idle <= 0) {
             $idle = $lifetime;
         }
+        $lifetime = max(86400, $lifetime);
+        $savePath = self::ensureSessionSavePath();
+        if ($savePath !== null) {
+            session_save_path($savePath);
+        }
+        ini_set('session.gc_maxlifetime', (string) max($lifetime, isset($idle) ? (int) $idle : $lifetime));
+        ini_set('session.cookie_lifetime', (string) $lifetime);
 
         session_name($name);
         session_set_cookie_params([
@@ -123,7 +130,7 @@ final class Auth
         self::requireLogin();
         if (!self::isAdmin()) {
             http_response_code(403);
-            echo '403 — No tenés permiso para esta acción.';
+            echo '403 â€” No tenÃ©s permiso para esta acciÃ³n.';
             exit;
         }
     }
@@ -203,7 +210,7 @@ final class Auth
         $_SESSION['_last_activity'] = time();
     }
 
-    /** Renueva la cookie en cada visita para que las 24 h corran desde la última actividad. */
+    /** Renueva la cookie en cada visita para que las 24 h corran desde la Ãºltima actividad. */
     private static function touchSessionCookie(int $lifetime): void
     {
         if ($lifetime <= 0 || !isset($_SESSION['user']) || session_status() !== PHP_SESSION_ACTIVE) {
@@ -246,5 +253,30 @@ final class Auth
     private static function throttleKey(): string
     {
         return substr(hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? 'cli')), 0, 32);
+    }
+
+    /** Carpeta propia: el tmp compartido borra sesiones a ~24 min (gc=1440). */
+    private static function ensureSessionSavePath(): ?string
+    {
+        $candidates = [
+            dirname(__DIR__) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'sessions',
+            rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'booky_sessions',
+        ];
+        foreach ($candidates as $dir) {
+            if (!is_dir($dir)) {
+                @mkdir($dir, 0777, true);
+            }
+            if (!is_dir($dir)) {
+                continue;
+            }
+            @chmod($dir, 0777);
+            $probe = $dir . DIRECTORY_SEPARATOR . '.write';
+            if (@file_put_contents($probe, '1') === false) {
+                continue;
+            }
+            @unlink($probe);
+            return $dir;
+        }
+        return null;
     }
 }
